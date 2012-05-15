@@ -15,18 +15,117 @@ class PHPFormHelper
 		{
 			throw new Exception('invalid PHPFormHelper arguments');
 		}
+		else if (!isset($_SESSION))
+		{
+			throw new Exception('Sessions not started.');
+		}
 		else
 		{
 			$this->arguments = $arguments;
 		}
 	}
 	
+	function displayErrors()
+	{
+		echo '<div class="alert alert-error"><a class="close" data-dismiss="alert" href="#">x</a><h4 class="alert-heading">Warning!</h4>';
+		foreach ($this->errors as $name => $message)
+		{
+			echo $message.'<br>';
+		}
+		echo '</div>';
+	}
+	
+	function getClean()
+	{
+		$clean = array();
+		foreach ($this->arguments as $name => $options)
+		{
+			$clean[$name] = htmlspecialchars(trim($_POST[$name]));
+		}
+	}
+	
+	function genRandomString($length = 10) {
+		$characters = '0123456789abcdefghijklmnopqrstuvwxyz';
+		$string = '';
+		for ($p = 0; $p < $length; $p++)
+		{
+			$rand = mt_rand(0, strlen($characters)-1);
+			$string .= substr($characters, $rand, 1);
+		}
+		return $string;
+	}
+		
+	function validate()
+	{
+		if (!isset($_POST['form_id']))
+		{
+			$this->errors['form'] = 'Invalid form submission.<br>';
+		}
+		else if ($_SESSION['form_id'] != $_POST['form_id'])
+		{
+			$this->errors['form'] = 'Invalid form submission.<br>';
+		}
+		
+		foreach ($this->arguments as $name => $options)
+		{
+			if (!is_array($options)) continue;
+			if (!isset($options['type'])) continue;
+			
+			switch ($options['type'])
+			{
+				case 'text':
+					$_POST[$name] = trim($_POST[$name]);
+					$label = $name;
+					if (isset($options['label'])) $label = $options['label'];
+					if (isset($options['required']))
+					{
+						if (!isset($_POST[$name]) || trim($_POST[$name]) == '')
+						{
+							if (!isset($this->errors[$name]))
+								$this->errors[$name] = $label.' is required.<br>';
+						}
+					}
+					if (isset($options['max']))
+					{
+						if (strlen($_POST[$name]) > $options['max'])
+						{
+							if (!isset($this->errors[$name]))
+								$this->errors[$name] = $label.' can not be longer than '.$options['max'].' characters.<br>';
+						}
+					}
+					if (isset($options['valid']) && $options['valid'] == 'email')
+					{
+						if(!filter_var($_POST[$name], FILTER_VALIDATE_EMAIL))
+						{
+							if (!isset($this->errors[$name]))
+								$this->errors[$name] = $label.' does not look valid, please check and try again.<br>';
+							
+						}
+					}
+					break;
+					
+				case 'radio':
+					$label = $name;
+					if (isset($options['label'])) $label = $options['label'];
+					if (isset($options['required']) && !isset($_POST[$name]))
+					{
+						if (!isset($this->errors[$name]))
+							$this->errors[$name] = $label.' is required.<br>';
+					}
+					if (isset($_POST[$name]) && !array_key_exists($_POST[$name], $options['options']))
+					{
+						if (!isset($this->errors[$name]))
+							$this->errors[$name] = 'Please select a valid value for '.$label.'.<br>';
+					}
+			}
+		}
+	}	
+	
 	function display($main = '', $alternate = '')
 	{
 		$this->main = $main;
 		$this->alternate = $alternate;
-		
-		
+				
 		$count = 0;
 		foreach ($this->arguments as $name => $options)
 		{
@@ -37,16 +136,23 @@ class PHPFormHelper
 			}
 			if (!is_array($options)) continue;
 			if (!isset($options['type'])) continue;
-			
-			
-			
+
 			switch ($options['type'])
 			{
 				case 'form':
 					$this->createForm($name, $options);
 					break;
+				case 'hidden':
+					$this->createHidden($name, $options);
+					break;
+				case 'submit':
+					$this->createSubmit($name, $options);
+					break;
 				case 'text':
 					$this->createText($name, $options);
+					break;
+				case 'radio':
+					$this->createRadio($name, $options);
 					break;
 					
 			}			
@@ -57,8 +163,24 @@ class PHPFormHelper
 	
 	function createForm($name, $options)
 	{
+		$form_id = $this->genRandomString(20);
+		$_SESSION['form_id'] = $form_id;
+		
 		if (!isset($options['method'])) $options['method'] = 'post';
 		echo '<form method="'.$options['method'].'" action="'.$options['url'].'" class="'.$options['class'].'" name="'.$name.'" id="'.$name.'">';
+			echo '<input type="hidden" name="form_id" value="'.$form_id.'">';
+	}
+	
+	function createHidden($name, $options)
+	{
+		if (!isset($options['value'])) return false;
+		echo '<input type="hidden" name="'.$name.'" value="'.$options['value'].'">';
+	}
+	
+	function createSubmit($name, $options)
+	{
+		if (isset($options['label'])) $options['label'] = 'Submit';
+		echo '<div class="form-actions"><input name="'.$name.'" type="submit" value="'.$options['label'].'" class="btn btn-primary" /></div>';
 	}
 	
 	function createText($name, $options)
@@ -74,9 +196,29 @@ class PHPFormHelper
 					if (isset($this->main[$name])) echo ' value="'.htmlspecialchars($this->main[$name]).'"';
 					else if (isset($this->alternate[$name])) echo ' value="'.htmlspecialchars($this->alternate[$name]).'"';
 					else echo ' value=""';
-					if (isset($options['max']) && ctype_digit($options['max'])) echo ' maxlength="'.$options['max'].'"';
+					if (isset($options['max'])) echo ' maxlength="'.$options['max'].'"';
 					if (isset($options['class'])) echo ' class="'.$options['class'].'"';
 				echo '>';
+			echo '</div>';
+		echo '</div>';
+	}
+	
+	function createRadio($name, $options)
+	{
+		if (!isset($options['label'])) $options['label'] = $name;
+		echo '<div class="control-group">';
+			echo '<label class="control-label">'.$options['label'].'</label>';
+			echo '<div class="controls">';
+				$count = 0;
+				foreach ($options['options'] as $value => $label)
+				{
+					echo '<label class="checkbox inline">'.$label.' <input type="radio" name="'.$name.'" value="'.$value.'"';
+					if (!isset($this->main[$name]) && !isset($this->alternate[$name]) && $count == 0) echo ' checked="checked"'; 
+					else if (isset($this->main[$name]) && $this->main[$name] == $value) echo ' checked="checked"'; 
+					else if (isset($this->alternate[$name]) && $this->alternate[$name] == $value) echo ' checked="checked"';
+					echo '></label>';
+					$count++;
+				}
 			echo '</div>';
 		echo '</div>';
 	}
