@@ -27,12 +27,14 @@ class PHPFormHelper
 	
 	function displayErrors()
 	{
-		echo '<div class="alert alert-error"><a class="close" data-dismiss="alert" href="#">x</a><h4 class="alert-heading">Warning!</h4>';
+		$error = '';
+		$error .= '<div class="alert alert-error"><a class="close" data-dismiss="alert" href="#">x</a><h4 class="alert-heading">Warning!</h4>';
 		foreach ($this->errors as $name => $message)
 		{
-			echo $message.'<br>';
+			$error .= $message;
 		}
-		echo '</div>';
+		$error .= '</div>';
+		return $error;
 	}
 	
 	function getClean()
@@ -40,8 +42,10 @@ class PHPFormHelper
 		$clean = array();
 		foreach ($this->arguments as $name => $options)
 		{
+			if (!isset($_POST[$name])) continue;
 			$clean[$name] = htmlspecialchars(trim($_POST[$name]));
 		}
+		return $clean;
 	}
 	
 	function genRandomString($length = 10) {
@@ -93,6 +97,14 @@ class PHPFormHelper
 								$this->errors[$name] = $label.' can not be longer than '.$options['max'].' characters.<br>';
 						}
 					}
+					if (isset($options['min']))
+					{
+						if (strlen($_POST[$name]) < $options['min'])
+						{
+							if (!isset($this->errors[$name]))
+								$this->errors[$name] = $label.' can not be less than '.$options['min'].' characters.<br>';
+						}
+					}
 					if (isset($options['valid']) && $options['valid'] == 'email')
 					{
 						if(!filter_var($_POST[$name], FILTER_VALIDATE_EMAIL))
@@ -119,6 +131,9 @@ class PHPFormHelper
 					}
 			}
 		}
+		
+		if (empty($this->errors)) return true;
+		return false;
 	}	
 	
 	function display($main = '', $alternate = '')
@@ -187,7 +202,9 @@ class PHPFormHelper
 	{
 		if (!isset($options['label'])) $options['label'] = $name;
 		
-		echo '<div class="control-group">';
+		echo '<div class="control-group';
+		if (isset($this->errors[$name])) echo ' error';
+		echo '">';
 			echo '<label class="control-label" for="'.$name.'">'.$options['label'];
 				if (isset($options['required'])) echo ' <span class="required">*</span>';
 			echo '</label>';
@@ -199,6 +216,7 @@ class PHPFormHelper
 					if (isset($options['max'])) echo ' maxlength="'.$options['max'].'"';
 					if (isset($options['class'])) echo ' class="'.$options['class'].'"';
 				echo '>';
+				if (isset($this->errors[$name])) echo '<span class="help-inline">'.$this->errors[$name].'</span>';
 			echo '</div>';
 		echo '</div>';
 	}
