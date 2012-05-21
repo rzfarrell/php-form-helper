@@ -129,6 +129,31 @@ class PHPFormHelper
 						if (!isset($this->errors[$name]))
 							$this->errors[$name] = 'Please select a valid value for '.$label.'.<br>';
 					}
+					break;
+					
+				case 'checkbox':
+					$label = $name;
+					if (isset($options['label'])) $label = $options['label'];
+					if (isset($options['required']) && !isset($_POST[$name]))
+					{
+						if (!isset($this->errors[$name]))
+							$this->errors[$name] = $label.' is required.<br>';
+					}
+					if (isset($_POST[$name]))
+					{
+						foreach ($_POST[$name] as $key => $value)
+						{
+							if (!array_key_exists($value, $options['options']))
+							{
+								if (!isset($this->errors[$name]))
+								{
+									$this->errors[$name] = 'Please select a valid value for '.$label.'.<br>';
+								}
+							}
+						}
+					}
+					break;
+					
 			}
 		}
 		
@@ -168,6 +193,9 @@ class PHPFormHelper
 					break;
 				case 'radio':
 					$this->createRadio($name, $options);
+					break;
+				case 'checkbox':
+					$this->createCheckbox($name, $options);
 					break;
 					
 			}			
@@ -224,19 +252,48 @@ class PHPFormHelper
 	function createRadio($name, $options)
 	{
 		if (!isset($options['label'])) $options['label'] = $name;
-		echo '<div class="control-group">';
+		echo '<div class="control-group';
+		if (isset($this->errors[$name])) echo ' error';
+		echo '">';
 			echo '<label class="control-label">'.$options['label'].'</label>';
 			echo '<div class="controls">';
 				$count = 0;
 				foreach ($options['options'] as $value => $label)
 				{
-					echo '<label class="checkbox inline">'.$label.' <input type="radio" name="'.$name.'" value="'.$value.'"';
+					echo '<label class="radio';
+					if (isset($options['class'])) echo ' '.$options['class'];
+					echo '"><input type="radio" name="'.$name.'" value="'.$value.'"';
 					if (!isset($this->main[$name]) && !isset($this->alternate[$name]) && $count == 0) echo ' checked="checked"'; 
 					else if (isset($this->main[$name]) && $this->main[$name] == $value) echo ' checked="checked"'; 
 					else if (isset($this->alternate[$name]) && $this->alternate[$name] == $value) echo ' checked="checked"';
-					echo '></label>';
+					echo '> '.$label.'</label>';
 					$count++;
 				}
+				if (isset($this->errors[$name])) echo '<span class="help-inline">'.$this->errors[$name].'</span>';
+			echo '</div>';
+		echo '</div>';
+	}
+	
+	function createCheckbox($name, $options)
+	{
+		if (!isset($options['label'])) $options['label'] = $name;
+		echo '<div class="control-group';
+		if (isset($this->errors[$name])) echo ' error';
+		echo '">';
+			echo '<label class="control-label">'.$options['label'].'</label>';
+			echo '<div class="controls">';
+				$count = 0;
+				foreach ($options['options'] as $value => $label)
+				{
+					echo '<label class="checkbox';
+					if (isset($options['class'])) echo ' '.$options['class'];
+					echo '"><input type="checkbox" name="'.$name.'[]" value="'.$value.'"';
+					if (isset($this->main[$name]) && $this->main[$name] == $value) echo ' checked="checked"'; 
+					else if (isset($this->alternate[$name]) && $this->alternate[$name] == $value) echo ' checked="checked"';
+					echo '> '.$label.'</label>';
+					$count++;
+				}
+				if (isset($this->errors[$name])) echo '<span class="help-inline">'.$this->errors[$name].'</span>';
 			echo '</div>';
 		echo '</div>';
 	}
