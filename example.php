@@ -14,6 +14,7 @@ $form_options = array 	(	'test_form'		=> array('type' => 'form', 'method' => 'po
 							'phone'			=> array('type' => 'text', 'required' => true, 'label' => 'Phone', 'max' => 12, 'validate' => array('phone')),
 							'cust_2_po_req'	=> array('type' => 'radio', 'required' => true, 'class' => 'inline', 'label' => 'P.O. Required', 'options' => array('N' => 'No', 'Y' => 'Yes')),
 							'cust_2_po_req2'=> array('type' => 'checkbox', 'required' => true, 'label' => 'Checkbox Required', 'options' => array('N' => 'No', 'Y' => 'Yes')),
+							'active'		=> array('type' => 'select', 'required' => true, 'label' => 'Account Active', 'options' => array('1' => 'Yes', '0' => 'No')),
 							'submit'		=> array('type' => 'submit', 'label' => 'Save')
 						);
 
