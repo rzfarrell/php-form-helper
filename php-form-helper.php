@@ -5,8 +5,9 @@ class PHPFormHelper
 	private $arguments = array();
 	private $main = array();
 	private $alternate = array();
+	private $require_form_tag = true;
 	
-	function __construct($arguments = '') {
+	function __construct($arguments = '', $require_form_tag = true) {
 		if (!is_array($arguments))
 		{
 			throw new Exception('invalid PHPFormHelper arguments');
@@ -22,6 +23,7 @@ class PHPFormHelper
 		else
 		{
 			$this->arguments = $arguments;
+			$this->require_form_tag = $require_form_tag;
 		}
 	}
 	
@@ -169,7 +171,7 @@ class PHPFormHelper
 		$count = 0;
 		foreach ($this->arguments as $name => $options)
 		{
-			if ($count == 0 && (!isset($options['type']) || $options['type'] != 'form'))
+			if ($this->require_form_tag && $count == 0 && (!isset($options['type']) || $options['type'] != 'form'))
 			{
 				echo 'must start arguments with a form type<br>';
 				return false;
@@ -196,6 +198,9 @@ class PHPFormHelper
 					break;
 				case 'checkbox':
 					$this->createCheckbox($name, $options);
+					break;
+				case 'select':
+					$this->createSelect($name, $options);
 					break;
 					
 			}			
@@ -248,6 +253,35 @@ class PHPFormHelper
 			echo '</div>';
 		echo '</div>';
 	}
+
+	function createSelect($name, $options)
+	{
+		if (!isset($options['label'])) $options['label'] = $name;
+		
+		echo '<div class="control-group';
+		if (isset($this->errors[$name])) echo ' error';
+		echo '">';
+			echo '<label class="control-label" for="'.$name.'">'.$options['label'];
+				if (isset($options['required'])) echo ' <span class="required">*</span>';
+			echo '</label>';
+			echo '<div class="controls">';
+				echo '<select name="'.$name.'" id="'.$name.'"';
+					if (isset($options['size'])) echo ' size="'.$options['size'].'"';
+					if (isset($options['class'])) echo ' class="'.$options['class'].'"';
+					if (isset($options['multiple'])) echo ' multiple="'.$options['multiple'].'"';
+				echo '>';
+				if ( isset($options['options']) && is_array($options['options']) ) {
+					foreach($options['options'] as $value => $description) {
+						echo '<option value="' . $value . '"';
+						if (isset($this->main[$name]) && $this->main[$name] == $value) echo ' selected="selected"';
+						echo '>' . $description . '</option>';
+					}
+				}
+				echo '</select>';
+				if (isset($this->errors[$name])) echo '<span class="help-inline">'.$this->errors[$name].'</span>';
+			echo '</div>';
+		echo '</div>';
+	}	
 	
 	function createRadio($name, $options)
 	{
