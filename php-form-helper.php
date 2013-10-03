@@ -273,7 +273,12 @@ class PHPFormHelper
 				if ( isset($options['options']) && is_array($options['options']) ) {
 					foreach($options['options'] as $value => $description) {
 						echo '<option value="' . $value . '"';
-						if (isset($this->main[$name]) && $this->main[$name] == $value) echo ' selected="selected"';
+						if (isset($this->main[$name])) {
+							echo $this->main[$name] == $value ?  ' selected="selected"' : '';
+						}
+						else if (isset($this->alternate[$name])) {
+							echo $this->alternate[$name] == $value ?  ' selected="selected"' : '';
+						}
 						echo '>' . $description . '</option>';
 					}
 				}
