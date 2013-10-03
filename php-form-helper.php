@@ -227,7 +227,7 @@ class PHPFormHelper
 	
 	function createSubmit($name, $options)
 	{
-		if (isset($options['label'])) $options['label'] = 'Submit';
+		if (!isset($options['label'])) $options['label'] = 'Submit';
 		echo '<div class="form-actions"><input name="'.$name.'" type="submit" value="'.$options['label'].'" class="btn btn-primary" /></div>';
 	}
 	
